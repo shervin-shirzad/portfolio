@@ -516,11 +516,11 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
   height: 100%;
 }
 
-/* Adobe brand colours — flat squares like real icons */
+/* Adobe brand colours — flat squares like real icons 
 .ps-icon  { background: linear-gradient(145deg, #001d34 0%, #003a5c 100%); }
 .ai-icon  { background: linear-gradient(145deg, #1a0a00 0%, #3d1a00 100%); }
 .id-icon  { background: linear-gradient(145deg, #1a0020 0%, #3d0050 100%); }
-.figma-icon { background: linear-gradient(145deg, #1a0040 0%, #2d0066 100%); }
+.figma-icon { background: linear-gradient(145deg, #1a0040 0%, #2d0066 100%); }*/
 
 .software-card__info {
   display: flex;
