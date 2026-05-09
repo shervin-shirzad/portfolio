@@ -567,7 +567,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 
 /* ── BRAND DESIGN — gold oval, top-left ── */
 .badge-wrap--brand {
-  top: 30px;
+  top: 18px;
   left: 0px;
   transform: rotate(-4deg);
   z-index: 3;
@@ -577,7 +577,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 
 /* ── LOGO — cream circle, overlapping brand ── */
 .badge-wrap--logo {
-  top: 18px;
+  top: 0px;
   left: 168px;
   transform: rotate(7deg);
   z-index: 4;
@@ -587,7 +587,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 
 /* ── SOCIAL MEDIA — red pill, top-right ── */
 .badge-wrap--social {
-  top: 25px;
+  top: 18px;
   right: 0px;
   transform: rotate(4deg);
   z-index: 5;
@@ -597,7 +597,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 
 /* ── CREATIVITY — white blob, bottom-left ── */
 .badge-wrap--creativity {
-  bottom: 35px;
+  bottom: 12px;
   left: 0px;
   transform: rotate(-2deg);
   z-index: 3;
@@ -607,7 +607,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 
 /* ── LAYOUT — red star, overlapping creativity ── */
 .badge-wrap--layout {
-  bottom: 45px;
+  bottom: 18px;
   left: 152px;
   transform: rotate(-5deg);
   z-index: 4;
@@ -617,7 +617,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 
 /* ── VECTOR ILLUSTRATION — gold banner, bottom-right ── */
 .badge-wrap--vector {
-  bottom: 55px;
+  bottom: 28px;
   right: 0px;
   transform: rotate(2deg);
   z-index: 5;
