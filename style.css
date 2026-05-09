@@ -568,7 +568,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── BRAND DESIGN — gold oval, top-left ── */
 .badge-wrap--brand {
   top: 18px;
-  left: 0px;
+  left: 200px;
   transform: rotate(-4deg);
   z-index: 3;
 }
@@ -578,7 +578,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── LOGO — cream circle, overlapping brand ── */
 .badge-wrap--logo {
   top: 0px;
-  left: 168px;
+  left: 280px;
   transform: rotate(7deg);
   z-index: 4;
 }
@@ -598,7 +598,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── CREATIVITY — white blob, bottom-left ── */
 .badge-wrap--creativity {
   bottom: 12px;
-  left: 0px;
+  left: 400px;
   transform: rotate(-2deg);
   z-index: 3;
 }
@@ -609,7 +609,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 .badge-wrap--layout {
   bottom: 80px;
   left: 340px;
-  transform: rotate(-5deg) scale(1.6);
+  transform: rotate(-5deg) scale(1.4);
   z-index: 4;
 }
 .badge-wrap--layout:hover { transform: rotate(-9deg) scale(1.06); }
