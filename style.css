@@ -541,7 +541,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 .skill-badges {
   position: relative;
   width: 100%;
-  height: 200px;
+  height: 240px;
 }
 
 /* shared badge wrapper */
