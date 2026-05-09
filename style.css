@@ -608,7 +608,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── LAYOUT — red star, overlapping creativity ── */
 .badge-wrap--layout {
   bottom: 80px;
-  left: 240px;
+  left: 280px;
   transform: rotate(-5deg);
   z-index: 4;
 }
