@@ -589,7 +589,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 .badge-wrap--social {
   top: 18px;
   right: 0px;
-  transform: rotate(4deg);
+  transform: rotate(12deg);
   z-index: 5;
 }
 .badge-wrap--social:hover { transform: rotate(7deg) scale(1.04); }
@@ -608,8 +608,8 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── LAYOUT — red star, overlapping creativity ── */
 .badge-wrap--layout {
   bottom: 80px;
-  left: 280px;
-  transform: rotate(-5deg) scale(1.2);
+  left: 340px;
+  transform: rotate(-5deg) scale(1.6);
   z-index: 4;
 }
 .badge-wrap--layout:hover { transform: rotate(-9deg) scale(1.06); }
