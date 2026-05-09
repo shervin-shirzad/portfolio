@@ -578,7 +578,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── LOGO — cream circle, overlapping brand ── */
 .badge-wrap--logo {
   top: 0px;
-  left: 280px;
+  left: 220px;
   transform: rotate(7deg);
   z-index: 4;
 }
@@ -598,7 +598,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── CREATIVITY — white blob, bottom-left ── */
 .badge-wrap--creativity {
   bottom: 12px;
-  left: 150px;
+  left: 120px;
   transform: rotate(-2deg);
   z-index: 3;
 }
