@@ -568,7 +568,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── BRAND DESIGN — gold oval, top-left ── */
 .badge-wrap--brand {
   top: 18px;
-  left: 200px;
+  left: 40px;
   transform: rotate(-4deg);
   z-index: 3;
 }
@@ -598,7 +598,7 @@ button { cursor: pointer; border: none; background: none; font-family: var(--fon
 /* ── CREATIVITY — white blob, bottom-left ── */
 .badge-wrap--creativity {
   bottom: 12px;
-  left: 400px;
+  left: 150px;
   transform: rotate(-2deg);
   z-index: 3;
 }
