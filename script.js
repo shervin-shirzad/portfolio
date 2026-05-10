@@ -13,6 +13,13 @@ const LOAD_MORE_COUNT = 6;
 let allItems = [];
 let displayedCount = 0;
 
+/**
+ * Stores blob URLs keyed by portfolio-item div element.
+ * Never revoked during the session — only on page unload.
+ * Fixes Chrome/Edge lightbox black-image bug caused by premature revocation.
+ */
+const blobUrlMap = new Map();
+
 /* ── DOM References ── */
 const html = document.documentElement;
 const themeToggle = document.getElementById('themeToggle');
@@ -183,17 +190,21 @@ function createPortfolioItem(item, idx) {
   div.appendChild(img);
   div.appendChild(overlay);
 
-  // Open lightbox — use the live src (blob URL after load)
+  // Open lightbox — always read from blobUrlMap (never from img.src directly)
+  // This avoids Chrome/Edge "black lightbox" bug when blob URL was revoked
   div.addEventListener('click', () => {
-    if (img.src && !img.src.startsWith('data:')) {
-      openLightbox(img.src, item.title);
+    const src = blobUrlMap.get(div) || img.src;
+    if (src && !src.startsWith('data:')) {
+      openLightbox(src, item.title);
     }
   });
   div.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') &&
-        img.src && !img.src.startsWith('data:')) {
-      e.preventDefault();
-      openLightbox(img.src, item.title);
+    if (e.key === 'Enter' || e.key === ' ') {
+      const src = blobUrlMap.get(div) || img.src;
+      if (src && !src.startsWith('data:')) {
+        e.preventDefault();
+        openLightbox(src, item.title);
+      }
     }
   });
 
@@ -217,51 +228,46 @@ async function loadProtectedImage(img) {
   const originalSrc = img.dataset.src;
   if (!originalSrc) return;
 
-  // Remove data-src immediately so duplicate observers don't double-load
+  // Remove immediately — prevents duplicate loads if observer fires twice
   img.removeAttribute('data-src');
 
   const div = img.closest('.portfolio-item');
+  const markLoaded = () => { if (div) div.classList.remove('loading'); };
 
-  const markLoaded = () => {
-    if (div) div.classList.remove('loading');
-  };
-
-  // ── Strategy 1: fetch → blob (hides original URL) ──
+  // ── Strategy 1: fetch → blob (hides original URL from DOM/DevTools) ──
   try {
-    const response = await fetch(originalSrc, {
-      method: 'GET',
-      // No 'force-cache' — causes CORS issues in Chrome
-      // No explicit mode — let browser negotiate CORS naturally
-    });
-
+    const response = await fetch(originalSrc);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
 
-    img.addEventListener('load', () => {
-      markLoaded();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-    }, { once: true });
+    // Store in Map — NEVER revoke early.
+    // Premature revocation = black lightbox in Chrome/Edge.
+    // All blob URLs are cleaned up together on page unload (see below).
+    if (div) blobUrlMap.set(div, blobUrl);
 
-    img.addEventListener('error', () => {
-      markLoaded();
-      URL.revokeObjectURL(blobUrl);
-    }, { once: true });
-
+    img.addEventListener('load',  markLoaded, { once: true });
+    img.addEventListener('error', markLoaded, { once: true });
     img.src = blobUrl;
 
   } catch (err) {
-    // ── Strategy 2: direct src fallback (if fetch/CORS fails) ──
-    // Image still displays; original URL is visible in Network tab
-    // but this is the graceful degradation path
-    console.warn('Blob fetch failed, using direct src:', err.message);
-
-    img.addEventListener('load', markLoaded, { once: true });
+    // ── Strategy 2: direct src fallback (CORS failed or network error) ──
+    console.warn('Blob fetch failed, falling back to direct src:', err.message);
+    if (div) blobUrlMap.set(div, originalSrc); // store original so lightbox still works
+    img.addEventListener('load',  markLoaded, { once: true });
     img.addEventListener('error', markLoaded, { once: true });
     img.src = originalSrc;
   }
 }
+
+// Clean up all blob URLs when the page is closed/navigated away
+window.addEventListener('beforeunload', () => {
+  blobUrlMap.forEach((url) => {
+    if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+  });
+  blobUrlMap.clear();
+});
 
 /* ── Lazy load + protect with IntersectionObserver ── */
 /* ── Lazy load + protect — Chrome/Firefox/Edge compatible ── */
