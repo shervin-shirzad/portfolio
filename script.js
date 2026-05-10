@@ -217,117 +217,172 @@ async function loadProtectedImage(img) {
   const originalSrc = img.dataset.src;
   if (!originalSrc) return;
 
+  // Remove data-src immediately so duplicate observers don't double-load
+  img.removeAttribute('data-src');
+
   const div = img.closest('.portfolio-item');
 
+  const markLoaded = () => {
+    if (div) div.classList.remove('loading');
+  };
+
+  // ── Strategy 1: fetch → blob (hides original URL) ──
   try {
     const response = await fetch(originalSrc, {
-      cache: 'force-cache',
-      mode: 'cors',          // explicit CORS for ImageKit CDN
+      method: 'GET',
+      // No 'force-cache' — causes CORS issues in Chrome
+      // No explicit mode — let browser negotiate CORS naturally
     });
+
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
 
-    img.removeAttribute('data-src'); // remove before setting src
-
     img.addEventListener('load', () => {
-      if (div) div.classList.remove('loading');
-      // Revoke after 3s — image is decoded in memory, safe to revoke
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+      markLoaded();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    }, { once: true });
+
+    img.addEventListener('error', () => {
+      markLoaded();
+      URL.revokeObjectURL(blobUrl);
     }, { once: true });
 
     img.src = blobUrl;
 
   } catch (err) {
-    // CORS blocked or fetch failed — fall back to direct src
-    // (image won't be blob-protected but will at least display)
-    console.warn('Protected fetch failed, using direct src:', originalSrc);
-    img.removeAttribute('data-src');
+    // ── Strategy 2: direct src fallback (if fetch/CORS fails) ──
+    // Image still displays; original URL is visible in Network tab
+    // but this is the graceful degradation path
+    console.warn('Blob fetch failed, using direct src:', err.message);
 
-    img.addEventListener('load', () => {
-      if (div) div.classList.remove('loading');
-    }, { once: true });
-
+    img.addEventListener('load', markLoaded, { once: true });
+    img.addEventListener('error', markLoaded, { once: true });
     img.src = originalSrc;
   }
 }
 
 /* ── Lazy load + protect with IntersectionObserver ── */
+/* ── Lazy load + protect — Chrome/Firefox/Edge compatible ── */
 function observePortfolioItems() {
   const lazyImgs = portfolioGrid.querySelectorAll('img[data-src]');
+  if (!lazyImgs.length) return;
 
   const imgObserver = new IntersectionObserver(
-    (entries) => {
+    (entries, observer) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
+          observer.unobserve(entry.target);
           loadProtectedImage(entry.target);
-          imgObserver.unobserve(entry.target);
         }
       });
     },
-    { rootMargin: '200px 0px' }
+    { rootMargin: '300px 0px', threshold: 0 }
   );
 
-  lazyImgs.forEach((img) => imgObserver.observe(img));
+  lazyImgs.forEach((img) => {
+    // ── Chrome fix: IntersectionObserver does NOT fire for elements
+    //    already in the viewport at observation time.
+    //    Check bounding rect manually and load immediately if visible.
+    const rect = img.getBoundingClientRect();
+    const alreadyVisible = rect.top < window.innerHeight + 300 &&
+                           rect.bottom > -300;
+    if (alreadyVisible) {
+      loadProtectedImage(img);
+    } else {
+      imgObserver.observe(img);
+    }
+  });
 }
 
 /* ============================================
-   DISABLE ALL IMAGE EXTRACTION VECTORS
+   IMAGE PROTECTION — full rewrite for all browsers
    ============================================ */
 function initImageProtection() {
 
-  /* 1. Block right-click globally */
-  document.addEventListener('contextmenu', (e) => {
-    if (
-      e.target.tagName === 'IMG' ||
-      e.target.closest('.portfolio-item') ||
-      e.target.closest('.lightbox__content')
-    ) {
-      e.preventDefault();
-    }
-  });
-
-  /* 2. Block drag on all images */
-  document.addEventListener('dragstart', (e) => {
-    if (e.target.tagName === 'IMG') e.preventDefault();
-  });
-
-  /* 3. Block Ctrl+S / Cmd+S (save page) */
-  document.addEventListener('keydown', (e) => {
-    const ctrl = e.ctrlKey || e.metaKey;
-
-    // Ctrl+S — Save
-    if (ctrl && e.key === 's') { e.preventDefault(); return; }
-    // Ctrl+U — View source
-    if (ctrl && e.key === 'u') { e.preventDefault(); return; }
-    // Ctrl+Shift+I / F12 — DevTools
-    if ((ctrl && e.shiftKey && e.key === 'I') || e.key === 'F12') {
-      e.preventDefault(); return;
-    }
-    // Ctrl+Shift+J — Console
-    if (ctrl && e.shiftKey && e.key === 'J') { e.preventDefault(); return; }
-    // Ctrl+Shift+C — Inspector
-    if (ctrl && e.shiftKey && e.key === 'C') { e.preventDefault(); return; }
-    // Ctrl+P — Print (can capture images)
-    if (ctrl && e.key === 'p') { e.preventDefault(); return; }
-  });
-
-  /* 4. Disable text/image selection on portfolio */
-  portfolioGrid.addEventListener('selectstart', (e) => e.preventDefault());
-
-  /* 5. CSS pointer-events on images handled via stylesheet,
-        but also set via JS as a belt-and-suspenders measure */
-  const styleEl = document.createElement('style');
-  styleEl.textContent = `
+  // ── 1. Inject protective CSS immediately ──
+  const css = document.createElement('style');
+  css.id = 'img-protection-css';
+  css.textContent = `
+    /* Prevent pointer events on images — right-click hits parent instead */
     .portfolio-item img,
-    .lightbox__img {
+    .lightbox__img,
+    .badge-svg,
+    .software-card__icon img {
       pointer-events: none !important;
       user-select: none !important;
       -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -webkit-user-drag: none !important;
       -webkit-touch-callout: none !important;
     }
+    /* Prevent selection across entire portfolio grid */
+    #portfolioGrid {
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+    /* Hide images from print */
+    @media print {
+      .portfolio-item, .lightbox { display: none !important; }
+    }
   `;
-  document.head.appendChild(styleEl);
+  document.head.appendChild(css);
+
+  // ── 2. Block right-click everywhere on page ──
+  // With pointer-events:none on img, target will be the wrapper div —
+  // so we block ALL contextmenu events (not just on IMG)
+  document.addEventListener('contextmenu', (e) => {
+    // Always block on portfolio items and lightbox
+    if (
+      e.target.closest('#portfolioGrid') ||
+      e.target.closest('#lightbox') ||
+      e.target.tagName === 'IMG'
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true); // capture phase — fires before any other handler
+
+  // ── 3. Block all drag on images ──
+  document.addEventListener('dragstart', (e) => {
+    if (e.target.tagName === 'IMG' || e.target.closest('#portfolioGrid')) {
+      e.preventDefault();
+    }
+  }, true);
+
+  // ── 4. Block middle-click (opens URL in new tab) ──
+  document.addEventListener('mousedown', (e) => {
+    if (e.button === 1 && ( // middle click
+      e.target.closest('#portfolioGrid') ||
+      e.target.closest('#lightbox')
+    )) {
+      e.preventDefault();
+    }
+  }, true);
+
+  // ── 5. Block selection on portfolio grid ──
+  document.getElementById('portfolioGrid')
+    ?.addEventListener('selectstart', (e) => e.preventDefault());
+
+  // ── 6. Keyboard shortcuts ──
+  document.addEventListener('keydown', (e) => {
+    const ctrl = e.ctrlKey || e.metaKey;
+
+    if (ctrl && e.key.toLowerCase() === 's') { e.preventDefault(); return; }
+    if (ctrl && e.key.toLowerCase() === 'u') { e.preventDefault(); return; }
+    if (ctrl && e.key.toLowerCase() === 'p') { e.preventDefault(); return; }
+    if (ctrl && e.shiftKey && e.key.toLowerCase() === 'i') { e.preventDefault(); return; }
+    if (ctrl && e.shiftKey && e.key.toLowerCase() === 'j') { e.preventDefault(); return; }
+    if (ctrl && e.shiftKey && e.key.toLowerCase() === 'c') { e.preventDefault(); return; }
+    if (e.key === 'F12') { e.preventDefault(); return; }
+
+    // Lightbox close
+    if (e.key === 'Escape' && lightbox.classList.contains('open')) {
+      closeLightbox();
+    }
+  });
 }
 
 
@@ -384,12 +439,7 @@ function closeLightbox() {
 lightboxClose.addEventListener('click', closeLightbox);
 lightboxOverlay.addEventListener('click', closeLightbox);
 
-/* Lightbox close on Escape */
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && lightbox.classList.contains('open')) {
-    closeLightbox();
-  }
-});
+// Image protection handled globally by initImageProtection()
 
 // Prevent image interaction inside lightbox
 // Image protection handled globally by initImageProtection()
