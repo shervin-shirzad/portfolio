@@ -303,19 +303,14 @@ function observePortfolioItems() {
 }
 
 /* ============================================
-   IMAGE PROTECTION — full rewrite for all browsers
+   IMAGE PROTECTION — maximum security
    ============================================ */
 function initImageProtection() {
 
-  // ── 1. Inject protective CSS immediately ──
+  /* ── 1. Protective CSS ── */
   const css = document.createElement('style');
-  css.id = 'img-protection-css';
   css.textContent = `
-    /* Prevent pointer events on images — right-click hits parent instead */
-    .portfolio-item img,
-    .lightbox__img,
-    .badge-svg,
-    .software-card__icon img {
+    img {
       pointer-events: none !important;
       user-select: none !important;
       -webkit-user-select: none !important;
@@ -323,72 +318,89 @@ function initImageProtection() {
       -webkit-user-drag: none !important;
       -webkit-touch-callout: none !important;
     }
-    /* Prevent selection across entire portfolio grid */
-    #portfolioGrid {
-      user-select: none !important;
-      -webkit-user-select: none !important;
+    .portfolio-item::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: transparent;
+      cursor: pointer;
     }
-    /* Hide images from print */
-    @media print {
-      .portfolio-item, .lightbox { display: none !important; }
-    }
+    @media print { body { display: none !important; } }
   `;
   document.head.appendChild(css);
 
-  // ── 2. Block right-click everywhere on page ──
-  // With pointer-events:none on img, target will be the wrapper div —
-  // so we block ALL contextmenu events (not just on IMG)
+  /* ── 2. Block ALL right-clicks on the entire page ── */
   document.addEventListener('contextmenu', (e) => {
-    // Always block on portfolio items and lightbox
-    if (
-      e.target.closest('#portfolioGrid') ||
-      e.target.closest('#lightbox') ||
-      e.target.tagName === 'IMG'
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-  }, true); // capture phase — fires before any other handler
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
 
-  // ── 3. Block all drag on images ──
+  /* ── 3. Block image drag ── */
   document.addEventListener('dragstart', (e) => {
-    if (e.target.tagName === 'IMG' || e.target.closest('#portfolioGrid')) {
+    if (e.target.tagName === 'IMG') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  /* ── 4. Block middle-click ── */
+  document.addEventListener('auxclick',  (e) => { if (e.button === 1) e.preventDefault(); }, true);
+  document.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); }, true);
+
+  /* ── 5. Block selection on portfolio ── */
+  document.addEventListener('selectstart', (e) => {
+    if (e.target.closest('#portfolioGrid') ||
+        e.target.closest('#lightbox') ||
+        e.target.tagName === 'IMG') {
       e.preventDefault();
     }
   }, true);
 
-  // ── 4. Block middle-click (opens URL in new tab) ──
-  document.addEventListener('mousedown', (e) => {
-    if (e.button === 1 && ( // middle click
-      e.target.closest('#portfolioGrid') ||
-      e.target.closest('#lightbox')
-    )) {
-      e.preventDefault();
-    }
-  }, true);
-
-  // ── 5. Block selection on portfolio grid ──
-  document.getElementById('portfolioGrid')
-    ?.addEventListener('selectstart', (e) => e.preventDefault());
-
-  // ── 6. Keyboard shortcuts ──
+  /* ── 6. Keyboard shortcuts — capture phase ── */
   document.addEventListener('keydown', (e) => {
     const ctrl = e.ctrlKey || e.metaKey;
-
-    if (ctrl && e.key.toLowerCase() === 's') { e.preventDefault(); return; }
-    if (ctrl && e.key.toLowerCase() === 'u') { e.preventDefault(); return; }
-    if (ctrl && e.key.toLowerCase() === 'p') { e.preventDefault(); return; }
-    if (ctrl && e.shiftKey && e.key.toLowerCase() === 'i') { e.preventDefault(); return; }
-    if (ctrl && e.shiftKey && e.key.toLowerCase() === 'j') { e.preventDefault(); return; }
-    if (ctrl && e.shiftKey && e.key.toLowerCase() === 'c') { e.preventDefault(); return; }
+    const key  = e.key.toLowerCase();
+    if (ctrl && key === 's') { e.preventDefault(); return; }
+    if (ctrl && key === 'u') { e.preventDefault(); return; }
+    if (ctrl && key === 'p') { e.preventDefault(); return; }
+    if (ctrl && e.shiftKey && key === 'i') { e.preventDefault(); return; }
+    if (ctrl && e.shiftKey && key === 'j') { e.preventDefault(); return; }
+    if (ctrl && e.shiftKey && key === 'c') { e.preventDefault(); return; }
+    if (ctrl && e.shiftKey && key === 'k') { e.preventDefault(); return; }
     if (e.key === 'F12') { e.preventDefault(); return; }
-
-    // Lightbox close
     if (e.key === 'Escape' && lightbox.classList.contains('open')) {
       closeLightbox();
     }
-  });
+  }, true);
+
+  /* ── 7. DevTools detection — blur images when DevTools opens ── */
+  (function devToolsGuard() {
+    const THRESHOLD = 160;
+    let devOpen = false;
+
+    const devCss = document.createElement('style');
+    devCss.textContent = `
+      .devtools-open .portfolio-item img,
+      .devtools-open .lightbox__img {
+        filter: blur(24px) !important;
+        transition: filter 0.3s ease;
+      }
+    `;
+    document.head.appendChild(devCss);
+
+    function check() {
+      const isOpen = (window.outerWidth  - window.innerWidth)  > THRESHOLD ||
+                     (window.outerHeight - window.innerHeight)  > THRESHOLD;
+      if (isOpen !== devOpen) {
+        devOpen = isOpen;
+        document.body.classList.toggle('devtools-open', isOpen);
+      }
+    }
+
+    window.addEventListener('resize', check, { passive: true });
+    setInterval(check, 800);
+  })();
 }
 
 
